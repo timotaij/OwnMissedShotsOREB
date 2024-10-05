@@ -125,6 +125,7 @@
         .catch(error => console.error('Error loading the CSV file:', error));
 
     // Function to calculate the percentile rank of a value within a list
+// Function to calculate the percentile rank of a value within a list
 function getPercentile(value, values) {
     values.sort((a, b) => a - b);  // Sort values in ascending order
     let rank = values.indexOf(value);
@@ -144,31 +145,34 @@ function getColorForPercentile(percentile) {
     return `rgb(${red}, ${green}, 120)`;
 }
 
-// Function to apply coloring to numeric columns based on percentile
+// Function to apply coloring to only the last 8 numeric columns based on percentile
 function renderTableBody(rows) {
     const tableBody = document.getElementById('tableBody');
     tableBody.innerHTML = '';  // Clear previous content
 
-    // Loop through columns and collect numeric values for percentile calculation
+    // Define the indices for the last 8 columns (adjust this based on your data structure)
+    const last8ColumnsStartIndex = rows[0].length - 8;
+
+    // Loop through the columns and collect numeric values for percentile calculation for the last 8 columns
     let columnValues = {};
     rows.forEach(row => {
         row.forEach((cell, index) => {
-            if (!isNaN(cell) && index > 0) {  // Skip non-numeric columns like Player Name
+            if (!isNaN(cell) && index >= last8ColumnsStartIndex) {  // Only consider the last 8 columns
                 if (!columnValues[index]) columnValues[index] = [];
                 columnValues[index].push(parseFloat(cell));
             }
         });
     });
 
-    // Render the rows and apply percentile-based coloring
+    // Render the rows and apply percentile-based coloring only to the last 8 columns
     rows.forEach(row => {
         const tr = document.createElement('tr');
         row.forEach((cell, index) => {
             const td = document.createElement('td');
             td.textContent = cell;
 
-            // Apply percentile coloring to numeric columns (skip Player Name)
-            if (!isNaN(cell) && index > 0) {
+            // Apply percentile coloring to numeric columns only if they are in the last 8 columns
+            if (!isNaN(cell) && index >= last8ColumnsStartIndex) {
                 const value = parseFloat(cell);
                 const percentile = getPercentile(value, columnValues[index]);
                 td.style.backgroundColor = getColorForPercentile(percentile);
@@ -179,6 +183,7 @@ function renderTableBody(rows) {
         tableBody.appendChild(tr);
     });
 }
+
 
 
     function filterTable() {
