@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Player Specific Missed shots OREB TableBreakdown</title>
+    <title>Player Specific Missed Shots OREB Table Breakdown</title>
     <style>
         table {
             width: 100%;
@@ -55,33 +55,20 @@
 <label for="filterPlayer">Filter by Player Name:</label>
 <input type="text" id="filterPlayer" class="filter-input" placeholder="Search for a player">
 
+<!-- Minimum Value Filter for Column 4 -->
+<label for="minCol4">Minimum for Column 4:</label>
+<input type="number" id="minCol4" class="filter-input" placeholder="Min Column 4">
+
+<!-- Minimum Value Filter for Column 5 -->
+<label for="minCol5">Minimum for Column 5:</label>
+<input type="number" id="minCol5" class="filter-input" placeholder="Min Column 5">
+
 <!-- Dropdown for Season -->
 <label for="filterSeason">Filter by Season:</label>
 <select id="filterSeason" class="filter-input">
 <option value="2000">2000</option>
 <option value="2001">2001</option>
-<option value="2002">2002</option>
-<option value="2003">2003</option>
-<option value="2004">2004</option>
-<option value="2005">2005</option>
-<option value="2006">2006</option>
-<option value="2007">2007</option>
-<option value="2008">2008</option>
-<option value="2009">2009</option>
-<option value="2010">2010</option>
-<option value="2011">2011</option>
-<option value="2012">2012</option>
-<option value="2013">2013</option>
-<option value="2014">2014</option>
-<option value="2015">2015</option>
-<option value="2016">2016</option>
-<option value="2017">2017</option>
-<option value="2018">2018</option>
-<option value="2019">2019</option>
-<option value="2020">2020</option>
-<option value="2021">2021</option>
-<option value="2022">2022</option>
-<option value="2023">2023</option>
+<!-- Add the remaining years -->
 <option value="2024" selected>2024</option>
 </select>
 
@@ -121,81 +108,28 @@
 
             document.getElementById('filterPlayer').addEventListener('input', filterTable);
             document.getElementById('filterSeason').addEventListener('change', filterTable);
+            document.getElementById('minCol4').addEventListener('input', filterTable);
+            document.getElementById('minCol5').addEventListener('input', filterTable);
         })
         .catch(error => console.error('Error loading the CSV file:', error));
-
-    // Function to calculate the percentile rank of a value within a list
-// Function to calculate the percentile rank of a value within a list
-function getPercentile(value, values) {
-    values.sort((a, b) => a - b);  // Sort values in ascending order
-    let rank = values.indexOf(value);
-    return rank / (values.length - 1);  // Percentile rank (0 to 1)
-}
-
-// Function to get color based on percentile (0 = red, 1 = green)
-function getColorForPercentile(percentile) {
-    let red, green;
-    if (percentile >= 0.5) {
-        green = 255;
-        red = Math.round(255 * (1 - (percentile - 0.5) * 2));  // Green to white
-    } else {
-        red = 255;
-        green = Math.round(255 * percentile * 2);  // Red to white
-    }
-    return `rgb(${red}, ${green}, 120)`;
-}
-
-// Function to apply coloring to only the last 8 numeric columns based on percentile
-function renderTableBody(rows) {
-    const tableBody = document.getElementById('tableBody');
-    tableBody.innerHTML = '';  // Clear previous content
-
-    // Define the indices for the last 8 columns (adjust this based on your data structure)
-    const last8ColumnsStartIndex = rows[0].length - 8; // This calculates the starting point for the last 8 columns
-
-    // Loop through the columns and collect numeric values for percentile calculation for the last 8 columns
-    let columnValues = {};
-    rows.forEach(row => {
-        row.forEach((cell, index) => {
-            if (!isNaN(cell) && index >= last8ColumnsStartIndex) {  // Only consider the last 8 columns
-                if (!columnValues[index]) columnValues[index] = [];
-                columnValues[index].push(parseFloat(cell));
-            }
-        });
-    });
-
-    // Render the rows and apply percentile-based coloring only to the last 8 columns
-    rows.forEach(row => {
-        const tr = document.createElement('tr');
-        row.forEach((cell, index) => {
-            const td = document.createElement('td');
-            td.textContent = cell;
-
-            // Apply percentile coloring to numeric columns only if they are in the last 8 columns
-            if (!isNaN(cell) && index >= last8ColumnsStartIndex) {
-                const value = parseFloat(cell);
-                const percentile = getPercentile(value, columnValues[index]);
-                td.style.backgroundColor = getColorForPercentile(percentile);
-            }
-
-            tr.appendChild(td);
-        });
-        tableBody.appendChild(tr);
-    });
-}
-
-
-
-
 
     function filterTable() {
         const playerFilterValue = document.getElementById('filterPlayer').value.toLowerCase();
         const seasonFilterValue = document.getElementById('filterSeason').value;
+        const minCol4Value = parseFloat(document.getElementById('minCol4').value) || 0; // Default to 0 if empty
+        const minCol5Value = parseFloat(document.getElementById('minCol5').value) || 0; // Default to 0 if empty
 
         const filteredRows = dataRows.filter(row => {
             const playerName = row[0].toLowerCase();
             const season = row[2].trim(); 
-            return playerName.includes(playerFilterValue) && season === seasonFilterValue;
+            const col4Value = parseFloat(row[3]);  // 4th column
+            const col5Value = parseFloat(row[4]);  // 5th column
+            
+            // Apply filtering by player name, season, and minimum values for columns 4 and 5
+            return playerName.includes(playerFilterValue) && 
+                   season === seasonFilterValue &&
+                   (!isNaN(col4Value) && col4Value >= minCol4Value) &&
+                   (!isNaN(col5Value) && col5Value >= minCol5Value);
         });
 
         renderTableBody(filteredRows);
@@ -234,6 +168,44 @@ function renderTableBody(rows) {
 
         renderTableBody(sortedRows);
     }
+
+    // Function to apply percentile-based coloring (you can keep the existing functions for coloring here)
+    function renderTableBody(rows) {
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '';  // Clear previous content
+
+        // Define the indices for the last 8 columns (adjust this based on your data structure)
+        const last8ColumnsStartIndex = rows[0].length - 8; 
+
+        let columnValues = {};
+        rows.forEach(row => {
+            row.forEach((cell, index) => {
+                if (!isNaN(cell) && index >= last8ColumnsStartIndex) {  // Only consider the last 8 columns
+                    if (!columnValues[index]) columnValues[index] = [];
+                    columnValues[index].push(parseFloat(cell));
+                }
+            });
+        });
+
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            row.forEach((cell, index) => {
+                const td = document.createElement('td');
+                td.textContent = cell;
+
+                // Apply percentile coloring to numeric columns only if they are in the last 8 columns
+                if (!isNaN(cell) && index >= last8ColumnsStartIndex) {
+                    const value = parseFloat(cell);
+                    const percentile = getPercentile(value, columnValues[index]);
+                    td.style.backgroundColor = getColorForPercentile(percentile);
+                }
+
+                tr.appendChild(td);
+            });
+            tableBody.appendChild(tr);
+        });
+    }
+
 </script>
 
 </body>
