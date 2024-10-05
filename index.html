@@ -124,40 +124,62 @@
         })
         .catch(error => console.error('Error loading the CSV file:', error));
 
-    function getColorForValue(value, min, max) {
-        const mid = (min + max) / 2;
-        let red, green;
+    // Function to calculate the percentile rank of a value within a list
+function getPercentile(value, values) {
+    values.sort((a, b) => a - b);  // Sort values in ascending order
+    let rank = values.indexOf(value);
+    return rank / (values.length - 1);  // Percentile rank (0 to 1)
+}
 
-        if (value >= mid) {
-            green = 255;
-            red = Math.round(255 * (1 - (value - mid) / (max - mid)));
-        } else {
-            red = 255;
-            green = Math.round(255 * (value - min) / (mid - min));
-        }
-
-        return `rgb(${red}, ${green}, 120)`;
+// Function to get color based on percentile (0 = red, 1 = green)
+function getColorForPercentile(percentile) {
+    let red, green;
+    if (percentile >= 0.5) {
+        green = 255;
+        red = Math.round(255 * (1 - (percentile - 0.5) * 2));  // Green to white
+    } else {
+        red = 255;
+        green = Math.round(255 * percentile * 2);  // Red to white
     }
+    return `rgb(${red}, ${green}, 120)`;
+}
 
-    function renderTableBody(rows) {
-        const tableBody = document.getElementById('tableBody');
-        tableBody.innerHTML = '';
-        rows.forEach(row => {
-            const tr = document.createElement('tr');
-            row.forEach((cell, index) => {
-                const td = document.createElement('td');
-                td.textContent = cell;
+// Function to apply coloring to numeric columns based on percentile
+function renderTableBody(rows) {
+    const tableBody = document.getElementById('tableBody');
+    tableBody.innerHTML = '';  // Clear previous content
 
-                if (!isNaN(cell) && index > 0 && index >= 11) {
-                    const value = parseFloat(cell);
-                    td.style.backgroundColor = getColorForValue(value, -3, 3);
-                }
-
-                tr.appendChild(td);
-            });
-            tableBody.appendChild(tr);
+    // Loop through columns and collect numeric values for percentile calculation
+    let columnValues = {};
+    rows.forEach(row => {
+        row.forEach((cell, index) => {
+            if (!isNaN(cell) && index > 0) {  // Skip non-numeric columns like Player Name
+                if (!columnValues[index]) columnValues[index] = [];
+                columnValues[index].push(parseFloat(cell));
+            }
         });
-    }
+    });
+
+    // Render the rows and apply percentile-based coloring
+    rows.forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach((cell, index) => {
+            const td = document.createElement('td');
+            td.textContent = cell;
+
+            // Apply percentile coloring to numeric columns (skip Player Name)
+            if (!isNaN(cell) && index > 0) {
+                const value = parseFloat(cell);
+                const percentile = getPercentile(value, columnValues[index]);
+                td.style.backgroundColor = getColorForPercentile(percentile);
+            }
+
+            tr.appendChild(td);
+        });
+        tableBody.appendChild(tr);
+    });
+}
+
 
     function filterTable() {
         const playerFilterValue = document.getElementById('filterPlayer').value.toLowerCase();
