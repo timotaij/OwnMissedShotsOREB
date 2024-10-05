@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reb Data Table</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 1;
+            cursor: pointer;
+        }
+        th.sortable:after {
+            content: '▲';
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        th.desc:after {
+            content: '▼';
+        }
+        .filter-input {
+            margin-bottom: 10px;
+        }
+        tbody {
+            display: block;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        thead, tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Rebounding Metric Table</h1>
+
+<!-- Filter Input for Player Name -->
+<label for="filterPlayer">Filter by Player Name:</label>
+<input type="text" id="filterPlayer" class="filter-input" placeholder="Search for a player">
+
+<!-- Dropdown for Season -->
+<label for="filterSeason">Filter by Season:</label>
+<select id="filterSeason" class="filter-input">
+<option value="2000">2000</option>
+<option value="2001">2001</option>
+<option value="2002">2002</option>
+<option value="2003">2003</option>
+<option value="2004">2004</option>
+<option value="2005">2005</option>
+<option value="2006">2006</option>
+<option value="2007">2007</option>
+<option value="2008">2008</option>
+<option value="2009">2009</option>
+<option value="2010">2010</option>
+<option value="2011">2011</option>
+<option value="2012">2012</option>
+<option value="2013">2013</option>
+<option value="2014">2014</option>
+<option value="2015">2015</option>
+<option value="2016">2016</option>
+<option value="2017">2017</option>
+<option value="2018">2018</option>
+<option value="2019">2019</option>
+<option value="2020">2020</option>
+<option value="2021">2021</option>
+<option value="2022">2022</option>
+<option value="2023">2023</option>
+<option value="2024" selected>2024</option>
+</select>
+
+<!-- Table -->
+<table id="csvTable">
+    <thead>
+        <tr id="tableHeader"></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+</table>
+
+<script>
+    const csvUrl = 'https://raw.githubusercontent.com/timotaij/OwnMissedShotsOREB/main/RebData.csv'; // Update this with your URL
+    let dataRows = []; 
+    let currentSortColumn = null;
+    let sortAscending = true;
+
+    fetch(csvUrl)
+        .then(response => response.text())
+        .then(data => {
+            const rows = data.split('\n').filter(row => row.trim() !== '');
+            const header = rows[0].split(',');
+            dataRows = rows.slice(1).map(row => row.split(','));
+            
+            const headerRow = document.getElementById('tableHeader');
+            header.forEach((cell, index) => {
+                const th = document.createElement('th');
+                th.textContent = cell;
+                th.classList.add('sortable');
+                th.addEventListener('click', () => {
+                    toggleSortByColumn(index, th);
+                });
+                headerRow.appendChild(th);
+            });
+
+            filterTable();
+
+            document.getElementById('filterPlayer').addEventListener('input', filterTable);
+            document.getElementById('filterSeason').addEventListener('change', filterTable);
+        })
+        .catch(error => console.error('Error loading the CSV file:', error));
+
+    function getColorForValue(value, min, max) {
+        const mid = (min + max) / 2;
+        let red, green;
+
+        if (value >= mid) {
+            green = 255;
+            red = Math.round(255 * (1 - (value - mid) / (max - mid)));
+        } else {
+            red = 255;
+            green = Math.round(255 * (value - min) / (mid - min));
+        }
+
+        return `rgb(${red}, ${green}, 120)`;
+    }
+
+    function renderTableBody(rows) {
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '';
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            row.forEach((cell, index) => {
+                const td = document.createElement('td');
+                td.textContent = cell;
+
+                if (!isNaN(cell) && index > 0 && index >= 11) {
+                    const value = parseFloat(cell);
+                    td.style.backgroundColor = getColorForValue(value, -3, 3);
+                }
+
+                tr.appendChild(td);
+            });
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function filterTable() {
+        const playerFilterValue = document.getElementById('filterPlayer').value.toLowerCase();
+        const seasonFilterValue = document.getElementById('filterSeason').value;
+
+        const filteredRows = dataRows.filter(row => {
+            const playerName = row[0].toLowerCase();
+            const season = row[2].trim(); 
+            return playerName.includes(playerFilterValue) && season === seasonFilterValue;
+        });
+
+        renderTableBody(filteredRows);
+    }
+
+    function toggleSortByColumn(columnIndex, headerEl) {
+        const allHeaders = document.querySelectorAll('.sortable');
+        allHeaders.forEach(th => th.classList.remove('desc', 'asc'));
+
+        if (currentSortColumn === columnIndex) {
+            sortAscending = !sortAscending;
+        } else {
+            sortAscending = true;
+            currentSortColumn = columnIndex;
+        }
+
+        headerEl.classList.add(sortAscending ? 'asc' : 'desc');
+
+        const filteredRows = dataRows.filter(row => {
+            const playerName = row[0].toLowerCase();
+            const season = row[2].trim();
+            return playerName.includes(document.getElementById('filterPlayer').value.toLowerCase()) &&
+                   season === document.getElementById('filterSeason').value;
+        });
+
+        const sortedRows = [...filteredRows].sort((a, b) => {
+            const valA = isNaN(a[columnIndex]) ? a[columnIndex] : parseFloat(a[columnIndex]);
+            const valB = isNaN(b[columnIndex]) ? b[columnIndex] : parseFloat(b[columnIndex]);
+
+            if (!isNaN(valA) && !isNaN(valB)) {
+                return sortAscending ? valA - valB : valB - valA;
+            } else {
+                return sortAscending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+        });
+
+        renderTableBody(sortedRows);
+    }
+</script>
+
+</body>
+</html>
