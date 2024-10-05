@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="viewport" content="width=device-width, initial-scale=1.0">
     <title>Player Specific Missed shots OREB Table Breakdown</title>
     <style>
         table {
@@ -58,30 +57,10 @@
 <!-- Dropdown for Season -->
 <label for="filterSeason">Filter by Season:</label>
 <select id="filterSeason" class="filter-input">
+    <option value="">All Seasons</option>
     <option value="2000">2000</option>
     <option value="2001">2001</option>
     <option value="2002">2002</option>
-    <option value="2003">2003</option>
-    <option value="2004">2004</option>
-    <option value="2005">2005</option>
-    <option value="2006">2006</option>
-    <option value="2007">2007</option>
-    <option value="2008">2008</option>
-    <option value="2009">2009</option>
-    <option value="2010">2010</option>
-    <option value="2011">2011</option>
-    <option value="2012">2012</option>
-    <option value="2013">2013</option>
-    <option value="2014">2014</option>
-    <option value="2015">2015</option>
-    <option value="2016">2016</option>
-    <option value="2017">2017</option>
-    <option value="2018">2018</option>
-    <option value="2019">2019</option>
-    <option value="2020">2020</option>
-    <option value="2021">2021</option>
-    <option value="2022">2022</option>
-    <option value="2023">2023</option>
     <option value="2024" selected>2024</option>
 </select>
 
@@ -132,6 +111,24 @@
             document.getElementById('applyFilter').addEventListener('click', filterTable);
         })
         .catch(error => console.error('Error loading the CSV file:', error));
+
+    function getPercentile(value, values) {
+        values.sort((a, b) => a - b);  // Sort values in ascending order
+        const rank = values.indexOf(value);
+        return rank / (values.length - 1);  // Percentile rank (0 to 1)
+    }
+
+    function getColorForPercentile(percentile) {
+        let red, green;
+        if (percentile >= 0.5) {
+            green = 255;
+            red = Math.round(255 * (1 - (percentile - 0.5) * 2));  // Green to white
+        } else {
+            red = 255;
+            green = Math.round(255 * percentile * 2);  // Red to white
+        }
+        return `rgb(${red}, ${green}, 120)`;
+    }
 
     function filterTable() {
         const playerFilterValue = document.getElementById('filterPlayer').value.toLowerCase();
@@ -192,16 +189,35 @@
         renderTableBody(sortedRows);
     }
 
-    // Function to render the table body
     function renderTableBody(rows) {
         const tableBody = document.getElementById('tableBody');
         tableBody.innerHTML = '';  // Clear previous content
+
+        const last8ColumnsStartIndex = rows[0].length - 8; 
+
+        let columnValues = {};
+        rows.forEach(row => {
+            row.forEach((cell, index) => {
+                if (!isNaN(cell) && index >= last8ColumnsStartIndex) {  // Only consider the last 8 columns
+                    if (!columnValues[index]) columnValues[index] = [];
+                    columnValues[index].push(parseFloat(cell));
+                }
+            });
+        });
 
         rows.forEach(row => {
             const tr = document.createElement('tr');
             row.forEach((cell, index) => {
                 const td = document.createElement('td');
                 td.textContent = cell;
+
+                // Apply percentile coloring to numeric columns only if they are in the last 8 columns
+                if (!isNaN(cell) && index >= last8ColumnsStartIndex) {
+                    const value = parseFloat(cell);
+                    const percentile = getPercentile(value, columnValues[index]);
+                    td.style.backgroundColor = getColorForPercentile(percentile);
+                }
+
                 tr.appendChild(td);
             });
             tableBody.appendChild(tr);
