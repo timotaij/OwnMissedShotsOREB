@@ -113,27 +113,31 @@
         })
         .catch(error => console.error('Error loading the CSV file:', error));
 
-    function filterTable() {
-        const playerFilterValue = document.getElementById('filterPlayer').value.toLowerCase();
-        const seasonFilterValue = document.getElementById('filterSeason').value;
-        const minCol4Value = parseFloat(document.getElementById('minCol4').value) || 0; // Default to 0 if empty
-        const minCol5Value = parseFloat(document.getElementById('minCol5').value) || 0; // Default to 0 if empty
+function filterTable() {
+    const playerFilterValue = document.getElementById('filterPlayer').value.toLowerCase();
+    const seasonFilterValue = document.getElementById('filterSeason').value;
+    const minCol4Value = document.getElementById('minCol4').value ? parseFloat(document.getElementById('minCol4').value) : null;
+    const minCol5Value = document.getElementById('minCol5').value ? parseFloat(document.getElementById('minCol5').value) : null;
 
-        const filteredRows = dataRows.filter(row => {
-            const playerName = row[0].toLowerCase();
-            const season = row[2].trim(); 
-            const col4Value = parseFloat(row[3]);  // 4th column
-            const col5Value = parseFloat(row[4]);  // 5th column
-            
-            // Apply filtering by player name, season, and minimum values for columns 4 and 5
-            return playerName.includes(playerFilterValue) && 
-                   season === seasonFilterValue &&
-                   (!isNaN(col4Value) && col4Value >= minCol4Value) &&
-                   (!isNaN(col5Value) && col5Value >= minCol5Value);
-        });
+    const filteredRows = dataRows.filter(row => {
+        const playerName = row[0].toLowerCase();
+        const season = row[2].trim(); 
+        const col4Value = parseFloat(row[3]);  // 4th column
+        const col5Value = parseFloat(row[4]);  // 5th column
 
-        renderTableBody(filteredRows);
-    }
+        // Conditions for each filter (if the filter is empty, ignore it)
+        const playerMatches = playerFilterValue === '' || playerName.includes(playerFilterValue);
+        const seasonMatches = seasonFilterValue === '' || season === seasonFilterValue;
+        const col4Matches = minCol4Value === null || (!isNaN(col4Value) && col4Value >= minCol4Value);
+        const col5Matches = minCol5Value === null || (!isNaN(col5Value) && col5Value >= minCol5Value);
+
+        // Return true if the row matches all filter conditions
+        return playerMatches && seasonMatches && col4Matches && col5Matches;
+    });
+
+    renderTableBody(filteredRows);
+}
+
 
     function toggleSortByColumn(columnIndex, headerEl) {
         const allHeaders = document.querySelectorAll('.sortable');
